@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MCP Host</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <script defer src="/static/app.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/ace-builds@1.32.9/src-min-noconflict/ace.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/ace-builds@1.32.9/src-min-noconflict/mode-json.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/ace-builds@1.32.9/src-min-noconflict/theme-chrome.js"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin: 0; background: #f7f7f8; }
+    header { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:#fff; border:none; }
+    main { padding:16px; }
+    .card { background:#fff; border:1px solid #e5e7eb; border-radius:8px; margin-bottom:12px; padding:12px; }
+    .row { display:flex; align-items:center; gap:8px; }
+    .btn { padding:6px 10px; border:1px solid #d1d5db; background:#fff; border-radius:6px; cursor:pointer; color:#374151; box-shadow:0 1px 2px rgba(0,0,0,0.03); }
+    .btn.primary { background:#10b981; color:#fff; border-color:#10b981; }
+    .badge { display:inline-block; font-size:12px; padding:2px 6px; border-radius:999px; background:#eef2ff; color:#4f46e5; margin-right:6px; }
+    .muted { color:#6b7280; font-size:12px; }
+    .tool { border-top:1px dashed #e5e7eb; padding-top:8px; margin-top:8px; }
+    .toggle { cursor:pointer; }
+    input[type="text"] { width: 280px; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; }
+    /* Modal */
+    .modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.35); align-items:center; justify-content:center; }
+    .modal-dialog { width:80%; max-width:960px; max-height:calc(100vh - 120px); background:#fff; border:1px solid #e5e7eb; border-radius:10px; box-shadow:0 10px 30px rgba(0,0,0,0.15); display:flex; flex-direction:column; overflow:hidden; }
+    .modal-head { padding:12px 16px; border-bottom:1px solid #e5e7eb; display:flex; align-items:center; justify-content:space-between; }
+    .modal-body { padding:12px 16px; }
+    .editor-wrap { border:1px solid #e5e7eb; border-radius:8px; background:#fafafa; }
+    .editor-wrap textarea { width:100%; height:420px; padding:12px 14px; border:none; outline:none; background:transparent; color:#111827; resize:none; overflow:auto; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; font-size:13px; line-height:1.6; }
+    .editor-wrap textarea::-webkit-scrollbar { width:10px; height:10px; }
+    .editor-wrap textarea::-webkit-scrollbar-thumb { background:#d1d5db; border-radius:6px; }
+    .editor-wrap textarea::-webkit-scrollbar-track { background:transparent; }
+  </style>
+  </head>
+<body>
+  <header>
+    <div class="row">
+      <strong>MCP 服务器</strong>
+    </div>
+    <div class="row">
+      <button class="btn" onclick="openAddServerModal()">添加服务器</button>
+      <button class="btn primary" onclick="openConfigEditor()">编辑配置</button>
+    </div>
+  </header>
+  <main>
+    <section id="serverList"></section>
+    <section id="toolsPanel" style="display:none;"></section>
+    <section id="detailPanel" style="display:none;"></section>
+  </main>
+  <div id="configModal" class="modal">
+    <div class="modal-dialog">
+    <div class="modal-head">
+      <strong>编辑 mcp_server_config.json</strong>
+      <div class="row">
+        <button class="icon-btn danger" onclick="closeConfigEditor()" title="取消">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+        <button class="icon-btn success" onclick="saveConfig()" title="保存">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        </button>
+      </div>
+    </div>
+      <div class="modal-body">
+        <div class="editor-wrap">
+          <div id="codeEditor"></div>
+        </div>
+        <div id="configError" class="muted" style="color:#dc2626; margin-top:6px;"></div>
+      </div>
+    </div>
+  </div>
+  <div id="addModal" class="modal" style="display:none;">
+    <div class="modal-dialog">
+      <div class="modal-head">
+        <strong>添加 MCP Server</strong>
+        <div class="row">
+          <button class="icon-btn danger" onclick="closeAddServerModal()" title="取消">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+          <button class="icon-btn success" onclick="connectAddServer()" title="连接">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="card">
+          <div class="form-row">
+            <div class="muted">MCP Server Name（必填）</div>
+            <input type="text" id="addName" />
+          </div>
+          <div class="form-row">
+            <div class="muted">描述</div>
+            <textarea id="addDesc" style="min-height:80px;"></textarea>
+          </div>
+          <div class="form-row">
+            <div class="muted">类型（必填）</div>
+            <select id="addType" onchange="renderAddTypeFields()">
+              <option value="stdio">stdio</option>
+              <option value="streamable-http">streamable-http</option>
+            </select>
+          </div>
+          <div id="addFields"></div>
+          <div id="addMsg" class="muted" style="margin-top:6px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

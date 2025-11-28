@@ -1,0 +1,35 @@
+{
+  "chrome-devtools": {
+    "enabled": true,
+    "tools": {
+      "close_page": {
+        "turn-on": false
+      },
+      "drag": {
+        "turn-on": false
+      }
+    }
+  },
+  "mcp-server-chart": {
+    "enabled": false,
+    "tools": {
+      "generate_area_chart": {
+        "turn-on": true
+      }
+    }
+  },
+  "高德地图": {
+    "enabled": false
+  },
+  "fetch": {
+    "enabled": false
+  },
+  "time": {
+    "enabled": true,
+    "tools": {
+      "convert_time": {
+        "turn-on": false
+      }
+    }
+  }
+}

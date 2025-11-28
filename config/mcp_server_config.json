@@ -1,0 +1,57 @@
+{
+  "mcpServers": {
+    "高德地图": {
+      "type": "streamable-http",
+      "url": "https://mcp.amap.com/mcp?key=输入你的apikeys",
+      "description": "高德地图MCP Server,  提供了基于位置服务、地点信息搜索、路径规划、天气查询等12大核心数据，让用户在出行规划、位置信息检索场景下轻松获取即时信息!",
+      "enabled": false,
+      "note": "高德地图MCP Server,  提供了基于位置服务、地点信息搜索、路径规划、天气查询等12大核心数据，让用户在出行规划、位置信息检索场景下轻松获取即时信息!"
+    },
+    "time": {
+      "enabled": true,
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "mcp-server-time"
+      ],
+      "env": {},
+      "description": "",
+      "note": ""
+    },
+    "fetch": {
+      "enabled": false,
+      "type": "stdio",
+      "command": "uvx",
+      "args": [
+        "mcp-server-fetch"
+      ],
+      "env": {},
+      "description": "",
+      "note": ""
+    },
+    "mcp-server-chart": {
+      "enabled": false,
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@antv/mcp-server-chart"
+      ],
+      "env": {},
+      "description": "",
+      "note": ""
+    },
+    "chrome-devtools": {
+      "enabled": true,
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ],
+      "env": {},
+      "description": "",
+      "note": ""
+    }
+  }
+}
