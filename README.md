@@ -50,50 +50,61 @@ host = MCPHost()  # 0.初始化 Host（聚合与路由工具）
 
 tools = host.list_all_tools()  # 1.读取启用服务器的工具注册表
 guide = host.tools_guide(tools)  # 2.生成参数指南供大模型参考
-has_tool, spec = host.detect_tool(content)  # 3.从大模型输出解析 <tool> 契约 JSON
+has_tool, spec = host.detect_tool(content)  # 3.从大模型输出解析 <tool> 指令 JSON
 tool_result = host.call_tool(spec, formated=True)  # 4.执行工具调用并返回格式化结果
 ```
 
 - `list_all_tools`：读取所有启用服务器的可用工具，形成注册表用于提示与后续调用。
 - `tools_guide`：从 JSON Schema 提取参数说明，生成人类可读指南，引导模型填参。
-- `detect_tool`：从模型输出中提取 `<tool>` 契约的 JSON，有则进入调用链，无则直接回复。
+- `detect_tool`：从模型输出中提取 `<tool>` 指令的 JSON，有则进入调用链，无则直接回复。
 - `call_tool`：按工具名自动定位服务器并执行，返回格式化的 `{name, server, result}` JSON，供下一轮注入 `<tool_result>...</tool_result>`。
 
 示例代码
 
 ```python
-from mcp_host import MCPHost  # 引入 MCP Host
-from openai import OpenAI
 import os
+import json
+from dotenv import load_dotenv
+from openai import OpenAI
+from mcp_host import MCPHost # 引入 MCP Host
+
+load_dotenv(override=False)
 
 client = OpenAI(base_url=os.getenv("LLM_BASE_URL"), api_key=os.getenv("LLM_API_KEY"))
 model = os.getenv("LLM_MODEL")
 
 host = MCPHost()  # 0.初始化 Host（聚合与路由工具）
 tools = host.list_all_tools()  # 1.读取启用服务器的工具注册表
-guide = host.tools_guide(tools)  # 2.生成参数指南供模型参考
+guide = host.tools_guide(tools)  # 2.生成参数指南供大模型参考
 
-user_msg = "帮我查询北京海淀区附近的咖啡店"
+user_msg = input("请输入消息: ").strip()
 sys_prompt = (
-    "你可使用 MCP 工具。若需要调用工具，仅输出：<tool>{\"type\":\"function\",\"name\":\"<工具名>\",\"parameters\":{...}}</tool>。"
-    "当信息充分时输出：<final>...</final>。以下为工具指南：\n" + guide
+    "你是人工智能助手。可使用 MCP 工具。若需要调用工具，"
+    "请仅输出如下格式文本：<tool>{\n\t\"type\": \"function\",\n\t\"name\": \"<工具名>\",\n\t\"parameters\": {…}\n}</tool>。"
+    "以下为各工具的使用说明：\n" + guide
 )
 
-first = client.chat.completions.create(model=model, messages=[
-    {"role": "system", "content": sys_prompt},
-    {"role": "user", "content": user_msg},
-])
-content = first.choices[0].message.content or ""
-
-has_tool, spec = host.detect_tool(content)  # 3.从模型输出解析 <tool> 契约 JSON
-if has_tool:
-    tool_result = host.call_tool(spec, formated=True)  # 4.执行工具调用并返回格式化结果
-    second = client.chat.completions.create(model=model, messages=[
+first = client.chat.completions.create(
+    model=model,
+    messages=[
         {"role": "system", "content": sys_prompt},
         {"role": "user", "content": user_msg},
-        {"role": "assistant", "content": content},
-        {"role": "system", "content": "<tool_result>" + tool_result + "</tool_result> 请基于工具结果用中文回复用户。"},
-    ])
+    ],
+)
+content = first.choices[0].message.content or ""
+
+has_tool, spec = host.detect_tool(content)  # 3.从大模型输出解析 <tool> 指令 JSON
+if has_tool:
+    tool_result = host.call_tool(spec, formated=True)  # 4.执行工具调用并返回格式化结果
+    second = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": sys_prompt},
+            {"role": "user", "content": user_msg},
+            {"role": "assistant", "content": content},
+            {"role": "system", "content": "<tool_result>" + tool_result + "</tool_result> 请基于工具结果用中文回复用户。"},
+        ],
+    )
     print(second.choices[0].message.content or "")
 else:
     print(content)

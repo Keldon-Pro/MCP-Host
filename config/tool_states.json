@@ -1,6 +1,6 @@
 {
   "chrome-devtools": {
-    "enabled": true,
+    "enabled": false,
     "tools": {
       "close_page": {
         "turn-on": false
@@ -19,13 +19,13 @@
     }
   },
   "高德地图": {
-    "enabled": false
+    "enabled": true
   },
   "fetch": {
     "enabled": false
   },
   "time": {
-    "enabled": true,
+    "enabled": false,
     "tools": {
       "convert_time": {
         "turn-on": false

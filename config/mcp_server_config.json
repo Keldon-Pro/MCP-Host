@@ -4,11 +4,11 @@
       "type": "streamable-http",
       "url": "https://mcp.amap.com/mcp?key=输入你的apikeys",
       "description": "高德地图MCP Server,  提供了基于位置服务、地点信息搜索、路径规划、天气查询等12大核心数据，让用户在出行规划、位置信息检索场景下轻松获取即时信息!",
-      "enabled": false,
+      "enabled": true,
       "note": "高德地图MCP Server,  提供了基于位置服务、地点信息搜索、路径规划、天气查询等12大核心数据，让用户在出行规划、位置信息检索场景下轻松获取即时信息!"
     },
     "time": {
-      "enabled": true,
+      "enabled": false,
       "type": "stdio",
       "command": "uvx",
       "args": [
@@ -42,7 +42,7 @@
       "note": ""
     },
     "chrome-devtools": {
-      "enabled": true,
+      "enabled": false,
       "type": "stdio",
       "command": "npx",
       "args": [
