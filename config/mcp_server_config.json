@@ -43,7 +43,7 @@
       "note": ""
     },
     "time": {
-      "enabled": false,
+      "enabled": true,
       "type": "stdio",
       "command": "uvx",
       "args": [

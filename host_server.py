@@ -16,6 +16,7 @@ STATIC_DIR = Path(__file__).resolve().parent / "web"
 CLIENTS: dict = {}
 CLIENT_LOCK = threading.Lock()
 TOOL_STATE_PATH = str(Path(__file__).resolve().parent / "config" / "tool_states.json")
+ORDER_PATH = str(Path(__file__).resolve().parent / "config" / "server_order.json")
 HOST: MCPHost = None
 
 
@@ -63,6 +64,36 @@ def _load_states() -> dict:
 def _save_states(states: dict) -> None:
     p = Path(TOOL_STATE_PATH)
     p.write_text(json.dumps(states, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _load_order() -> list:
+    p = Path(ORDER_PATH)
+    if not p.exists():
+        try:
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text("[]", encoding="utf-8")
+        except Exception:
+            pass
+        return []
+    try:
+        try:
+            text = p.read_text(encoding="utf-8-sig")
+        except Exception:
+            text = p.read_text(encoding="utf-8")
+        data = json.loads(text)
+        if isinstance(data, list):
+            return [str(x) for x in data]
+        return []
+    except Exception:
+        return []
+
+
+def _save_order(order: list) -> None:
+    p = Path(ORDER_PATH)
+    try:
+        p.write_text(json.dumps(list(order), ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:
+        pass
 
 
 def _get_servers(cfg: dict) -> dict:
@@ -171,6 +202,7 @@ class HostHandler(BaseHTTPRequestHandler):
             cfg = _load_config()
             states = _load_states()
             servers = _get_servers(cfg)
+            order = _load_order()
             out = []
             for name, entry in servers.items():
                 if entry.get("disabled") is not None:
@@ -190,8 +222,15 @@ class HostHandler(BaseHTTPRequestHandler):
                     "note": entry.get("note"),
                     "description": entry.get("description") or entry.get("note") or "",
                 })
+            # sort by order file
+            pos = {n: i for i, n in enumerate(order)}
+            out.sort(key=lambda s: (pos.get(s.get("name"), 10**9), s.get("name") or ""))
             meta = {"config_path": CONFIG_PATH, "keys": list(cfg.keys()), "mcpServers_count": (len(cfg.get("mcpServers") or {}) if isinstance(cfg.get("mcpServers"), dict) else None)}
             self._json(200, {"servers": out, "meta": meta})
+            return
+        if parsed.path == "/api/servers/order":
+            ord_list = _load_order()
+            self._json(200, {"order": ord_list})
             return
         if parsed.path == "/api/config":
             p = Path(CONFIG_PATH)
@@ -531,7 +570,31 @@ class HostHandler(BaseHTTPRequestHandler):
             entry = {"type": "streamable-http", "url": url, "enabled": True}
             _set_server(cfg, name, entry)
             _save_config(cfg)
+            try:
+                order = _load_order()
+                if name not in order:
+                    order.append(str(name))
+                    _save_order(order)
+            except Exception:
+                pass
             self._json(200, {"ok": True})
+            return
+        if parsed.path == "/api/servers/order":
+            order = payload.get("order")
+            if not isinstance(order, list):
+                self._bad_request("order must be list")
+                return
+            cfg = _load_config()
+            servers = _get_servers(cfg)
+            names = set(servers.keys())
+            # keep only known names, preserve given sequence
+            new_order = [str(n) for n in order if str(n) in names]
+            # append any missing servers at the end
+            for n in servers.keys():
+                if n not in new_order:
+                    new_order.append(str(n))
+            _save_order(new_order)
+            self._json(200, {"ok": True, "order": new_order})
             return
         if parsed.path.startswith("/api/server/") and parsed.path.endswith("/config"):
             name = unquote(parsed.path.split("/")[3])
@@ -565,6 +628,17 @@ class HostHandler(BaseHTTPRequestHandler):
                     c.close()
             except Exception:
                 pass
+            try:
+                # reflect rename in order file
+                if new_name != name:
+                    order = _load_order()
+                    order = [new_name if x == name else x for x in order]
+                    # ensure new_name present at least once
+                    if new_name not in order:
+                        order.append(new_name)
+                    _save_order(order)
+            except Exception:
+                pass
             self._json(200, {"ok": True, "name": new_name, "entry": entry})
             return
         if parsed.path.startswith("/api/"):
@@ -594,6 +668,12 @@ class HostHandler(BaseHTTPRequestHandler):
                 except Exception:
                     pass
                 _save_states(states)
+                try:
+                    order = _load_order()
+                    order = [x for x in order if x != name]
+                    _save_order(order)
+                except Exception:
+                    pass
             except Exception:
                 pass
             c = None

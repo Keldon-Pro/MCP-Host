@@ -11,6 +11,8 @@ async function loadServers() {
   arr.forEach(s => {
     const card = document.createElement('div')
     card.className = 'card server-card'
+    card.draggable = true
+    card.dataset.name = s.name
     const head = document.createElement('div')
     head.className = 'row'
     head.innerHTML = `<strong>${s.name}</strong><span class="badge">${s.type||'http'}</span>`
@@ -46,8 +48,42 @@ async function loadServers() {
     card.appendChild(desc)
     
     card.addEventListener('click', (e) => {
-      if (e.target.closest('.icon-btn') || e.target.closest('.toggle')) return
+      if (window._dragging || e.target.closest('.icon-btn') || e.target.closest('.toggle')) return
       window.location.href = `/settings.html?name=${encodeURIComponent(s.name)}`
+    })
+
+    card.addEventListener('dragstart', (e) => {
+      window._dragging = true
+      try { e.dataTransfer.setData('text/plain', s.name) } catch (_) {}
+      e.dataTransfer.effectAllowed = 'move'
+      card.classList.add('dragging')
+    })
+    card.addEventListener('dragend', () => {
+      window._dragging = false
+      card.classList.remove('dragging')
+    })
+    card.addEventListener('dragover', (e) => { e.preventDefault() })
+    card.addEventListener('drop', async (e) => {
+      e.preventDefault()
+      const src = (e.dataTransfer && e.dataTransfer.getData('text/plain')) || ''
+      const tgt = s.name
+      if (!src || src === tgt) return
+      const list = document.getElementById('serverList')
+      const items = Array.from(list.querySelectorAll('.server-card'))
+      const srcEl = items.find(el => (el.dataset && el.dataset.name) === src)
+      const tgtEl = items.find(el => (el.dataset && el.dataset.name) === tgt)
+      if (!srcEl || !tgtEl) return
+      const rect = tgtEl.getBoundingClientRect()
+      const after = (e.clientY > rect.top + rect.height / 2)
+      if (after) {
+        list.insertBefore(srcEl, tgtEl.nextSibling)
+      } else {
+        list.insertBefore(srcEl, tgtEl)
+      }
+      const order = Array.from(list.querySelectorAll('.server-card')).map(el => el.dataset.name)
+      try {
+        await fetch('/api/servers/order', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ order }) })
+      } catch (_) {}
     })
     list.appendChild(card)
   })

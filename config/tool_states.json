@@ -27,7 +27,7 @@
     }
   },
   "time": {
-    "enabled": false
+    "enabled": true
   },
   "fetch": {
     "enabled": false
