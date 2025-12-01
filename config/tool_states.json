@@ -19,17 +19,17 @@
     }
   },
   "高德地图": {
-    "enabled": true
+    "enabled": true,
+    "tools": {
+      "maps_direction_driving": {
+        "turn-on": true
+      }
+    }
+  },
+  "time": {
+    "enabled": false
   },
   "fetch": {
     "enabled": false
-  },
-  "time": {
-    "enabled": false,
-    "tools": {
-      "convert_time": {
-        "turn-on": false
-      }
-    }
   }
 }

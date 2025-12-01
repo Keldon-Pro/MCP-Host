@@ -37,8 +37,8 @@ async function loadServers() {
     detail.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>`
     detail.onclick = () => { window.location.href = `/settings.html?name=${encodeURIComponent(s.name)}` }
     head.appendChild(toggle)
-    head.appendChild(del)
     head.appendChild(detail)
+    head.appendChild(del)
     card.appendChild(head)
     const desc = document.createElement('div')
     desc.className = 'muted'
@@ -679,6 +679,9 @@ async function connectAddServer() {
   const desc = document.getElementById('addDesc').value || ''
   const type = document.getElementById('addType').value
   const msg = document.getElementById('addMsg')
+  const btnOk = document.getElementById('addConnectBtn')
+  const btnCancel = document.getElementById('addCancelBtn')
+  const setBusy = (b) => { if (btnOk) btnOk.disabled = b; if (btnCancel) btnCancel.disabled = b }
   msg.textContent = ''
   if (!name) {
     msg.textContent = '名称必填'
@@ -686,6 +689,7 @@ async function connectAddServer() {
     return
   }
   try {
+    let busySet = false
     if (type === 'stdio') {
       const cmd = (document.getElementById('addCommand').value || '').trim()
       let argsArr = []
@@ -697,6 +701,7 @@ async function connectAddServer() {
         msg.style.color = '#dc2626'
         return
       }
+      if (!busySet) { msg.innerHTML = '<div class="loading"><span class="spinner"></span> 正在连接...</div>'; msg.style.color = '#64748b'; setBusy(true); busySet = true }
       const entry = { type: 'stdio', command: cmd, args: Array.isArray(argsArr) ? argsArr : [], env: envObj, description: desc, enabled: true }
       const r = await fetch(`/api/server/${encodeURIComponent(name)}/config`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, entry }) })
       const d = await r.json()
@@ -710,6 +715,7 @@ async function connectAddServer() {
         msg.style.color = '#dc2626'
         return
       }
+      if (!busySet) { msg.innerHTML = '<div class="loading"><span class="spinner"></span> 正在连接...</div>'; msg.style.color = '#64748b'; setBusy(true); busySet = true }
       const a = await fetchJSON('/api/server/add', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ name, url }) })
       if (!a || !a.ok) throw new Error('添加失败')
       const patch = { description: desc, headers: headersObj }
@@ -730,5 +736,7 @@ async function connectAddServer() {
     msg.textContent = `失败：${e.message || e}`
     msg.style.color = '#dc2626'
     showToast('操作失败', 'error')
+  } finally {
+    setBusy(false)
   }
 }

@@ -11,14 +11,10 @@
   <script defer src="https://cdn.jsdelivr.net/npm/ace-builds@1.32.9/src-min-noconflict/theme-chrome.js"></script>
   <style>
     body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial; margin: 0; background: #f7f7f8; }
-    header { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:#fff; border:none; }
-    main { padding:16px; }
-    .card { background:#fff; border:1px solid #e5e7eb; border-radius:8px; margin-bottom:12px; padding:12px; }
-    .row { display:flex; align-items:center; gap:8px; }
-    .btn { padding:6px 10px; border:1px solid #d1d5db; background:#fff; border-radius:6px; cursor:pointer; color:#374151; box-shadow:0 1px 2px rgba(0,0,0,0.03); }
-    .btn.primary { background:#10b981; color:#fff; border-color:#10b981; }
+    main { padding:24px; }
+    .card { background:#fff; border:1px solid #e5e7eb; border-radius:8px; margin-bottom:12px; padding:20px; }
     .badge { display:inline-block; font-size:12px; padding:2px 6px; border-radius:999px; background:#eef2ff; color:#4f46e5; margin-right:6px; }
-    .muted { color:#6b7280; font-size:12px; }
+    .muted { color:#6b7280; font-size:14px; }
     .tool { border-top:1px dashed #e5e7eb; padding-top:8px; margin-top:8px; }
     .toggle { cursor:pointer; }
     input[type="text"] { width: 280px; padding:6px 8px; border:1px solid #d1d5db; border-radius:6px; }
@@ -37,7 +33,13 @@
 <body>
   <header>
     <div class="row">
-      <strong>MCP 服务器</strong>
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>
+        <rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>
+        <line x1="6" y1="6" x2="6.01" y2="6"></line>
+        <line x1="6" y1="18" x2="6.01" y2="18"></line>
+      </svg>
+      <strong>MCP Host</strong>
     </div>
     <div class="row">
       <button class="btn" onclick="openAddServerModal()">添加服务器</button>
@@ -80,13 +82,13 @@
       <div class="modal-head">
         <strong>添加 MCP Server</strong>
         <div class="row">
-          <button class="icon-btn danger" onclick="closeAddServerModal()" title="取消">
+          <button id="addCancelBtn" class="icon-btn danger" onclick="closeAddServerModal()" title="取消">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
           </button>
-          <button class="icon-btn success" onclick="connectAddServer()" title="连接">
+          <button id="addConnectBtn" class="icon-btn success" onclick="connectAddServer()" title="连接">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
