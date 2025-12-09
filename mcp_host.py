@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Dict, Optional, Any, List, Tuple
 
 from mcp_client import MCPClient, MCPClientError, MCPStdioClient
+import constants
 
 LOGGER = logging.getLogger(__name__)
 
@@ -25,13 +26,37 @@ class MCPHost:
         - `prewarm`: 是否在启动时对 stdio 服务器进行工具列表预热
         """
         # 解析配置路径与内部状态容器
-        self.config_path = config_path or str(Path(__file__).resolve().parent / "config" / "mcp_server_config.json")
+        self.config_path = config_path or constants.DEFAULT_CONFIG_PATH
         self._cfg: Dict[str, Any] = {}
         self._servers: Dict[str, Dict[str, Any]] = {}
         self._clients: Dict[str, MCPClient] = {}
         self.load_config(self.config_path)
         if prewarm:
             self.start(prewarm=True)
+
+    @staticmethod
+    def _load_json(path: str) -> Any:
+        p = Path(path)
+        if not p.exists():
+            return None
+        try:
+            try:
+                text = p.read_text(encoding="utf-8-sig")
+            except Exception:
+                text = p.read_text(encoding="utf-8")
+            return json.loads(text)
+        except Exception:
+            return None
+
+    @staticmethod
+    def _save_json(path: str, data: Any) -> bool:
+        try:
+            p = Path(path)
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            return True
+        except Exception:
+            return False
 
     def load_config(self, path: Optional[str] = None) -> None:
         """
@@ -41,14 +66,8 @@ class MCPHost:
         - 文件编码使用 `utf-8`，异常时降级为空配置
         """
         # 读取并解析 JSON 配置，允许两种结构并合并到统一的字典
-        p = Path(path or self.config_path)
-        if p.exists():
-            try:
-                self._cfg = json.loads(p.read_text(encoding="utf-8"))
-            except Exception:
-                self._cfg = {}
-        else:
-            self._cfg = {}
+        self.config_path = path or self.config_path
+        self._cfg = self._load_json(self.config_path) or {}
         servers_map = {}
         m = self._cfg.get("mcpServers") or {}
         for name, entry in m.items():
@@ -183,24 +202,13 @@ class MCPHost:
 
     def load_states(self) -> Dict[str, Any]:
         # 读取工具状态文件（包含每个服务器工具的启用开关与备注）
-        p = str(Path(__file__).resolve().parent / "config" / "tool_states.json")
-        f = Path(p)
-        if not f.exists():
-            try:
-                f.parent.mkdir(parents=True, exist_ok=True)
-                f.write_text("{}", encoding="utf-8")
-            except Exception:
-                pass
+        p = constants.TOOL_STATES_PATH
+        d = self._load_json(p)
+        if d is None:
+            # 初始化空文件
+            self._save_json(p, {})
             return {}
-        try:
-            try:
-                t = f.read_text(encoding="utf-8-sig")
-            except Exception:
-                t = f.read_text(encoding="utf-8")
-            d = json.loads(t)
-            return d if isinstance(d, dict) else {}
-        except Exception:
-            return {}
+        return d if isinstance(d, dict) else {}
 
     def list_all_tools(self) -> Dict[str, Dict[str, Any]]:
         # 聚合所有启用服务器的工具，并结合状态文件过滤掉关闭的工具
@@ -210,9 +218,14 @@ class MCPHost:
             name = s.get("name")
             if not name or not s.get("enabled"):
                 continue
+            
+            # Check if server is disabled in tool_states.json
+            sstate = states.get(name) or {}
+            if sstate.get("enabled") is False:
+                continue
+
             info = self.list_tools(name) or {"tools": []}
             tools = info.get("tools") or []
-            sstate = states.get(name) or {}
             tstate = (sstate.get("tools") if isinstance(sstate.get("tools"), dict) else {}) or {}
             for t in tools:
                 n = t.get("name")
@@ -237,14 +250,29 @@ class MCPHost:
         # 基于工具的描述、JSON Schema 与状态备注，生成可读的参数指南
         lines: List[str] = []
         states = self.load_states()
-        for tool_name in sorted(registry.keys()):
+        
+        # Sort by server order in tool_states.json, then by tool name
+        server_order = list(states.keys())
+        
+        def sort_key(tool_name):
+            server = registry[tool_name]["server"]
+            try:
+                idx = server_order.index(server)
+            except ValueError:
+                idx = 999999
+            return (idx, server, tool_name)
+            
+        sorted_keys = sorted(registry.keys(), key=sort_key)
+        
+        for tool_name in sorted_keys:
             schema = registry[tool_name]["schema"]
             server = registry[tool_name]["server"]
             desc = (schema.get("description") or schema.get("summary") or schema.get("note") or "") if isinstance(schema, dict) else ""
+            
+            lines.append(f"[Tool] {tool_name}")
             if desc:
-                lines.append(f"- {tool_name}: {desc}")
-            else:
-                lines.append(f"- {tool_name}:")
+                lines.append(f"  Description: {desc}")
+            
             try:
                 note = ""
                 sstate = states.get(server) or {}
@@ -254,18 +282,21 @@ class MCPHost:
                     note = (entry.get("note") or "").strip()
                 if note:
                     # 若工具在状态文件中带有备注，则插入到指南中
-                    lines.append(f"  note: {note}")
+                    lines.append(f"  Note: {note}")
             except Exception:
                 pass
+                
             ps = self.extract_param_schema(schema)
             props = (ps.get("properties") if isinstance(ps, dict) else None) or {}
             required = (ps.get("required") if isinstance(ps, dict) else None) or []
+            
             if props:
+                lines.append("  Parameters:")
                 for k, v in props.items():
                     typ = v.get("type") if isinstance(v, dict) else None
                     dsc = v.get("description") if isinstance(v, dict) else None
                     req = "required" if k in required else "optional"
-                    seg = f"  {k} ({typ or 'any'}, {req})"
+                    seg = f"    - {k} ({typ or 'any'}, {req})"
                     if dsc:
                         seg += f": {dsc}"
                     lines.append(seg)
@@ -274,19 +305,20 @@ class MCPHost:
                 if alt is None:
                     alt = schema.get("args") if isinstance(schema, dict) else None
                 if isinstance(alt, list) and alt:
+                    lines.append("  Parameters:")
                     for p in alt:
                         name = p.get("name") or "param"
                         typ = p.get("type") or "any"
                         req = "required" if p.get("required") else "optional"
                         dsc = p.get("description") or None
-                        seg = f"  {name} ({typ}, {req})"
+                        seg = f"    - {name} ({typ}, {req})"
                         if dsc:
                             seg += f": {dsc}"
                         lines.append(seg)
                 else:
                     # 无法从 schema/parameters/args 推断参数细节
-                    lines.append("  (参数信息不可用)")
-            lines.append("")
+                    lines.append("  Parameters: (No detailed information available)")
+            lines.append("-" * 50)
         return "\n".join(lines)
 
     def detect_tool(self, text: str) -> Tuple[bool, Dict[str, Any]]:
@@ -395,7 +427,8 @@ class MCPHost:
                     del self._clients[name]
                 except Exception:
                     pass
-                self._servers[name]["status"] = "disabled"
+                if name in self._servers:
+                    self._servers[name]["status"] = "disabled"
         for name in self._servers.keys():
             if self._servers[name].get("enabled") and name not in self._clients:
                 try:
@@ -415,6 +448,64 @@ class MCPHost:
         """
         # 用于直接访问底层客户端能力（例如调试或扩展）
         return self._clients.get(name)
+
+    def list_prompts(self, name: str) -> Dict[str, Any]:
+        """
+        拉取指定服务器的 Prompt 列表。
+        - 自动处理客户端连接
+        """
+        if not self._servers.get(name) or not self._servers[name].get("enabled"):
+            return {"prompts": [], "remote_enabled": False}
+        client = self._clients.get(name)
+        if not client:
+            if not self.enable_server(name):
+                return {"prompts": [], "remote_enabled": False}
+            client = self._clients.get(name)
+        try:
+            return client.list_prompts()
+        except Exception:
+            return {"prompts": [], "remote_enabled": False}
+
+    def list_resources(self, name: str) -> Dict[str, Any]:
+        """
+        拉取指定服务器的 Resource 列表。
+        - 自动处理客户端连接
+        """
+        if not self._servers.get(name) or not self._servers[name].get("enabled"):
+            return {"resources": [], "remote_enabled": False}
+        client = self._clients.get(name)
+        if not client:
+            if not self.enable_server(name):
+                return {"resources": [], "remote_enabled": False}
+            client = self._clients.get(name)
+        try:
+            return client.list_resources()
+        except Exception:
+            return {"resources": [], "remote_enabled": False}
+
+    def get_server_config(self) -> Dict[str, Any]:
+        """返回当前的完整配置（原始字典）"""
+        return self._cfg
+
+    def save_server_config(self, cfg: Dict[str, Any]) -> bool:
+        """保存配置到文件，并触发重载"""
+        ok = self._save_json(self.config_path, cfg)
+        if ok:
+            self.reload_config()
+        return ok
+
+    def get_server_order(self) -> List[str]:
+        p = constants.SERVER_ORDER_PATH
+        d = self._load_json(p)
+        return d if isinstance(d, list) else []
+
+    def save_server_order(self, order: List[str]) -> bool:
+        p = constants.SERVER_ORDER_PATH
+        return self._save_json(p, list(order))
+
+    def save_states(self, states: Dict[str, Any]) -> bool:
+        p = constants.TOOL_STATES_PATH
+        return self._save_json(p, states)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="[%(asctime)s] %(levelname)s %(name)s: %(message)s")

@@ -1,6 +1,6 @@
 {
   "chrome-devtools": {
-    "enabled": false,
+    "enabled": true,
     "tools": {
       "close_page": {
         "turn-on": false
@@ -27,7 +27,12 @@
     }
   },
   "time": {
-    "enabled": true
+    "enabled": true,
+    "tools": {
+      "get_current_time": {
+        "turn-on": true
+      }
+    }
   },
   "fetch": {
     "enabled": true
