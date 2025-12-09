@@ -409,7 +409,7 @@ class HostHandler(BaseHTTPRequestHandler):
             self._bad_request("name and url required")
             return
         cfg = HOST.get_server_config()
-        entry = {"type": "streamable-http", "url": url, "enabled": True}
+        entry = {"type": "streamable http", "url": url, "enabled": True}
         m = cfg.setdefault("mcpServers", {})
         m[name] = entry
         HOST.save_server_config(cfg)
