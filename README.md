@@ -1,5 +1,23 @@
 # 🚀 MCP Host 
 
+<div align="right">
+  <details>
+    <summary>🌐 Language</summary>
+    <div>
+      <div align="right">
+        <p><a href="README.en.md">English</a></p>
+        <p><a href="README.md">简体中文</a></p>
+      </div>
+    </div>
+  </details>
+  </div>
+
+
+
+AI Agent 需要具备通过大模型调用外部工具的能力。[模型上下文协议（MCP）](https://modelcontextprotocol.io/docs/getting-started/intro) 成为大模型调用工具的标准。随着生态持续壮大，众多产品与服务纷纷推出各自的 MCP Server，但在实际开发智能体时，接入 MCP 仍需要大量工程工作与样板代码。
+
+**MCP Host** 将与 MCP 相关的繁杂工作一并托管，开箱即用。开发者只需专注业务逻辑，无需关心 MCP 的接入细节。
+
 ## 🎯 项目功能
 
 - 提供管理 MCP Server 配置的可视化面板：在页面中查看/新增/编辑/启用/禁用服务器与工具，并支持备注与工具开关管理

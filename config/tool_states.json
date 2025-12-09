@@ -1,6 +1,6 @@
 {
   "chrome-devtools": {
-    "enabled": true,
+    "enabled": false,
     "tools": {
       "close_page": {
         "turn-on": false

@@ -20,7 +20,7 @@
       "note": ""
     },
     "chrome-devtools": {
-      "enabled": true,
+      "enabled": false,
       "type": "stdio",
       "command": "npx",
       "args": [
