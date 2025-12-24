@@ -45,9 +45,10 @@ def main():
         content = first.choices[0].message.content or ""
 
         while step < max_steps:
+            print("\nASSISTANT > " + content + "\n")
+
             has_tool, spec = host.detect_tool(content) 
             if not has_tool:
-                print("\nASSISTANT > " + content + "\n")
                 break
 
             print("\nASSISTANT > 生成的工具调用\n")
@@ -61,7 +62,7 @@ def main():
                 {"role": "system", "content": sys_prompt},
                 {"role": "user", "content": user_msg},
                 {"role": "assistant", "content": content},
-                {"role": "system", "content": "".join(results) + " 若信息不足，请继续输出工具调用；若信息充分，请输出<final>并基于工具结果用中文回复；若用户问题信息不全，请直接向用户说明需要哪些补充信息。"},
+                {"role": "system", "content": "".join(results) +  " 若信息不足，请继续输出工具调用；若信息充分，请按如下格式输出（<final> 后需空行）：\n<final>\n\n中文回复内容\n</final>\n并基于工具结果用中文回复；若用户问题信息不全，请直接向用户说明需要哪些补充信息。"},
             ]
             second = client.chat.completions.create(model=model, messages=messages)
             content = second.choices[0].message.content or ""

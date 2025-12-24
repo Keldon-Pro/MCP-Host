@@ -1,6 +1,6 @@
 {
   "chrome-devtools": {
-    "enabled": false,
+    "enabled": true,
     "tools": {
       "close_page": {
         "turn-on": false
@@ -18,16 +18,8 @@
       }
     }
   },
-  "高德地图": {
-    "enabled": false,
-    "tools": {
-      "maps_direction_driving": {
-        "turn-on": true
-      }
-    }
-  },
   "time": {
-    "enabled": true,
+    "enabled": false,
     "tools": {
       "get_current_time": {
         "turn-on": true
@@ -35,6 +27,24 @@
     }
   },
   "fetch": {
-    "enabled": true
+    "enabled": false
+  },
+  "高德地图": {
+    "enabled": false
+  },
+  "Aviation MCP": {
+    "enabled": false
+  },
+  "12306": {
+    "enabled": false
+  },
+  "Tripmatch": {
+    "enabled": false
+  },
+  "Booking": {
+    "enabled": false
+  },
+  "airbnb": {
+    "enabled": false
   }
 }

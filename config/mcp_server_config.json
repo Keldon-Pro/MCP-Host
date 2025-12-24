@@ -1,12 +1,5 @@
 {
   "mcpServers": {
-    "高德地图": {
-      "type": "streamable http",
-      "url": "https://mcp.amap.com/mcp?key=输入你的apikeys",
-      "description": "高德地图MCP Server,  提供了基于位置服务、地点信息搜索、路径规划、天气查询等12大核心数据，让用户在出行规划、位置信息检索场景下轻松获取即时信息!",
-      "enabled": false,
-      "note": "高德地图MCP Server,  提供了基于位置服务、地点信息搜索、路径规划、天气查询等12大核心数据，让用户在出行规划、位置信息检索场景下轻松获取即时信息!"
-    },
     "mcp-server-chart": {
       "enabled": false,
       "type": "stdio",
@@ -20,7 +13,7 @@
       "note": ""
     },
     "chrome-devtools": {
-      "enabled": false,
+      "enabled": true,
       "type": "stdio",
       "command": "npx",
       "args": [
@@ -32,7 +25,7 @@
       "note": ""
     },
     "fetch": {
-      "enabled": true,
+      "enabled": false,
       "type": "stdio",
       "command": "uvx",
       "args": [
@@ -43,11 +36,79 @@
       "note": ""
     },
     "time": {
-      "enabled": true,
+      "enabled": false,
       "type": "stdio",
       "command": "uvx",
       "args": [
         "mcp-server-time"
+      ],
+      "env": {},
+      "description": "",
+      "note": ""
+    },
+    "高德地图": {
+      "type": "streamable http",
+      "url": "https://mcp.amap.com/mcp?key=",
+      "enabled": false,
+      "description": "",
+      "headers": {},
+      "note": ""
+    },
+    "Tripmatch": {
+      "enabled": false,
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@variflight-ai/tripmatch-mcp"
+      ],
+      "env": {
+        "X_VARIFLIGHT_KEY": "sk-JF4c0-dkCSvVT-xB6YH6ldvWLSTmploXoig3RIqeauo"
+      },
+      "description": "",
+      "note": ""
+    },
+    "Aviation MCP": {
+      "type": "streamable http",
+      "url": "https://ai.variflight.com/servers/aviation/mcp/?api_key=sk-Tj_eWbyFAZ-SZEMG_zvsmwixoI9ZYtSnyWMETQzwjiQ",
+      "enabled": false,
+      "description": "",
+      "headers": {},
+      "note": ""
+    },
+    "12306": {
+      "enabled": false,
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "12306-mcp"
+      ],
+      "env": {},
+      "description": "",
+      "note": ""
+    },
+    "Booking": {
+      "enabled": false,
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "@brightdata/mcp"
+      ],
+      "env": {
+        "API_TOKEN": "bc1f5a4625315c1243102042499a47bb756a4fd67fa399d4bd97f14a7183e874",
+        "GROUPS": "advanced_scraping,travel"
+      },
+      "description": "",
+      "note": ""
+    },
+    "airbnb": {
+      "enabled": false,
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "-y",
+        "@openbnb/mcp-server-airbnb"
       ],
       "env": {},
       "description": "",
