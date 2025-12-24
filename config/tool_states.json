@@ -1,6 +1,6 @@
 {
   "chrome-devtools": {
-    "enabled": true,
+    "enabled": false,
     "tools": {
       "close_page": {
         "turn-on": false
@@ -29,12 +29,6 @@
   "fetch": {
     "enabled": false
   },
-  "高德地图": {
-    "enabled": false
-  },
-  "Aviation MCP": {
-    "enabled": false
-  },
   "12306": {
     "enabled": false
   },
@@ -44,7 +38,33 @@
   "Booking": {
     "enabled": false
   },
-  "airbnb": {
+  "高德地图": {
+    "tools": {
+      "maps_geo": {
+        "turn-on": false
+      },
+      "maps_regeocode": {
+        "turn-on": false
+      },
+      "maps_schema_personal_map": {
+        "turn-on": false
+      },
+      "maps_ip_location": {
+        "turn-on": false
+      },
+      "maps_schema_navi": {
+        "turn-on": false
+      },
+      "maps_schema_take_taxi": {
+        "turn-on": false
+      },
+      "maps_search_detail": {
+        "turn-on": true,
+        "note": "返回POI的经纬度(location)"
+      }
+    }
+  },
+  "variflight": {
     "enabled": false
   }
 }

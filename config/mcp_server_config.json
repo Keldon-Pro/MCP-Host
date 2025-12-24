@@ -13,7 +13,7 @@
       "note": ""
     },
     "chrome-devtools": {
-      "enabled": true,
+      "enabled": false,
       "type": "stdio",
       "command": "npx",
       "args": [
@@ -46,14 +46,6 @@
       "description": "",
       "note": ""
     },
-    "高德地图": {
-      "type": "streamable http",
-      "url": "https://mcp.amap.com/mcp?key=",
-      "enabled": false,
-      "description": "",
-      "headers": {},
-      "note": ""
-    },
     "Tripmatch": {
       "enabled": false,
       "type": "stdio",
@@ -66,14 +58,6 @@
         "X_VARIFLIGHT_KEY": "sk-JF4c0-dkCSvVT-xB6YH6ldvWLSTmploXoig3RIqeauo"
       },
       "description": "",
-      "note": ""
-    },
-    "Aviation MCP": {
-      "type": "streamable http",
-      "url": "https://ai.variflight.com/servers/aviation/mcp/?api_key=sk-Tj_eWbyFAZ-SZEMG_zvsmwixoI9ZYtSnyWMETQzwjiQ",
-      "enabled": false,
-      "description": "",
-      "headers": {},
       "note": ""
     },
     "12306": {
@@ -102,15 +86,25 @@
       "description": "",
       "note": ""
     },
-    "airbnb": {
+    "高德地图": {
+      "type": "streamable http",
+      "url": "https://mcp.amap.com/mcp?key=d0f96e94926901924ee4cf1b89fb9d71",
+      "enabled": true,
+      "description": "",
+      "headers": {},
+      "note": ""
+    },
+    "variflight": {
       "enabled": false,
       "type": "stdio",
       "command": "npx",
       "args": [
         "-y",
-        "@openbnb/mcp-server-airbnb"
+        "@variflight-ai/variflight-mcp"
       ],
-      "env": {},
+      "env": {
+        "VARIFLIGHT_API_KEY": "sk-Tj_eWbyFAZ-SZEMG_zvsmwixoI9ZYtSnyWMETQzwjiQ"
+      },
       "description": "",
       "note": ""
     }

@@ -45,14 +45,15 @@ def main():
         content = first.choices[0].message.content or ""
 
         while step < max_steps:
-            print("\nASSISTANT > " + content + "\n")
-
-            has_tool, spec = host.detect_tool(content) 
-            if not has_tool:
+            has_tool, spec = host.detect_tool(content)
+            
+            if has_tool:
+                print("\nASSISTANT > 生成的工具调用\n")
+                print(json.dumps(spec, ensure_ascii=False, indent=2))
+            else:
+                print("\nASSISTANT > " + content + "\n")
                 break
 
-            print("\nASSISTANT > 生成的工具调用\n")
-            print(json.dumps(spec, ensure_ascii=False, indent=2))
             tool_result = host.call_tool(spec, formated=True)
             results.append("<tool_result>" + tool_result + "</tool_result>")
             print("\nTOOL_RESULT >\n")
