@@ -4,3 +4,7 @@ __pycache__/
 Thumbs.db
 *.log
 .env
+.env.*
+.vscode/
+node_modules/
+config/*secrets*.json

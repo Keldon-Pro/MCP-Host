@@ -32,12 +32,6 @@
   "12306": {
     "enabled": false
   },
-  "Tripmatch": {
-    "enabled": false
-  },
-  "Booking": {
-    "enabled": false
-  },
   "高德地图": {
     "tools": {
       "maps_geo": {
@@ -63,8 +57,5 @@
         "note": "返回POI的经纬度(location)"
       }
     }
-  },
-  "variflight": {
-    "enabled": false
   }
 }

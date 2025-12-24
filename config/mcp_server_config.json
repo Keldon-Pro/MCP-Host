@@ -46,20 +46,6 @@
       "description": "",
       "note": ""
     },
-    "Tripmatch": {
-      "enabled": false,
-      "type": "stdio",
-      "command": "npx",
-      "args": [
-        "-y",
-        "@variflight-ai/tripmatch-mcp"
-      ],
-      "env": {
-        "X_VARIFLIGHT_KEY": "sk-JF4c0-dkCSvVT-xB6YH6ldvWLSTmploXoig3RIqeauo"
-      },
-      "description": "",
-      "note": ""
-    },
     "12306": {
       "enabled": false,
       "type": "stdio",
@@ -72,40 +58,12 @@
       "description": "",
       "note": ""
     },
-    "Booking": {
-      "enabled": false,
-      "type": "stdio",
-      "command": "npx",
-      "args": [
-        "@brightdata/mcp"
-      ],
-      "env": {
-        "API_TOKEN": "bc1f5a4625315c1243102042499a47bb756a4fd67fa399d4bd97f14a7183e874",
-        "GROUPS": "advanced_scraping,travel"
-      },
-      "description": "",
-      "note": ""
-    },
     "高德地图": {
       "type": "streamable http",
-      "url": "https://mcp.amap.com/mcp?key=d0f96e94926901924ee4cf1b89fb9d71",
+      "url": "https://mcp.amap.com/mcp?key=",
       "enabled": true,
       "description": "",
       "headers": {},
-      "note": ""
-    },
-    "variflight": {
-      "enabled": false,
-      "type": "stdio",
-      "command": "npx",
-      "args": [
-        "-y",
-        "@variflight-ai/variflight-mcp"
-      ],
-      "env": {
-        "VARIFLIGHT_API_KEY": "sk-Tj_eWbyFAZ-SZEMG_zvsmwixoI9ZYtSnyWMETQzwjiQ"
-      },
-      "description": "",
       "note": ""
     }
   }
