@@ -117,6 +117,27 @@ else:
 
 - Supports any model and provider compatible with the OpenAI SDK: set `LLM_BASE_URL`, `LLM_API_KEY`, and `LLM_MODEL` to the vendor gateway and model.
 - Example: Ark platform `LLM_BASE_URL=https://ark.cn-beijing.volces.com/api/v3`; other OpenAI-compatible gateways can be used.
+- Native Function Calling adapters are now included:
+  - OpenAI: `host.tools_for_openai(...)` + `host.detect_native_tool_calls("openai", message)`
+  - Qwen: `host.tools_for_qwen(...)` + `host.detect_native_tool_calls("qwen", message)`
+  - DeepSeek: `host.tools_for_deepseek(...)` + `host.detect_native_tool_calls("deepseek", message)`
+  - Gemini: `host.tools_for_gemini(...)` + `host.detect_native_tool_calls("gemini", message)`
+
+### Native Function Calling Quick Example
+
+```python
+tools = host.list_all_tools()
+openai_tools = host.tools_for_openai(tools)  # same shape works for qwen/deepseek
+
+resp = client.chat.completions.create(
+    model=model,
+    messages=[{"role": "user", "content": "What's the weather in Hangzhou today?"}],
+    tools=openai_tools,
+    tool_choice="auto",
+)
+calls = host.detect_native_tool_calls("openai", resp.choices[0].message)
+results = host.call_native_tool_calls(calls, formated=True)
+```
 
 ## 🛠️ Environment and Dependencies
 
@@ -147,3 +168,6 @@ Run examples:
 - Single call chain: `python demo_agent.py`
 - Multi-step interaction: `python demo_agent_multi.py`
 
+Optional env vars:
+- `TOOL_CALL_MODE=native|text` (default `native`)
+- `LLM_PROVIDER=openai|qwen|deepseek|gemini` (default `openai`)
