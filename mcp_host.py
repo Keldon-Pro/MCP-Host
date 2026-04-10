@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Dict, Optional, Any, List, Tuple
 
 from mcp_client import MCPClient, MCPClientError, MCPStdioClient
+from native_function_calling import NativeFunctionCallingAdapter
 import constants
 
 LOGGER = logging.getLogger(__name__)
@@ -320,6 +321,28 @@ class MCPHost:
                     lines.append("  Parameters: (No detailed information available)")
             lines.append("-" * 50)
         return "\n".join(lines)
+
+
+    def build_native_tools_payload(self, provider: str) -> Any:
+        """
+        将当前可用 MCP 工具转换为模型厂商原生 function calling 的 tools 配置。
+        支持: openai / qwen / deepseek / gemini
+        """
+        registry = self.list_all_tools()
+        return NativeFunctionCallingAdapter.build_tools_payload(provider, registry)
+
+    def parse_native_tool_calls(self, provider: str, response: Any) -> List[Dict[str, Any]]:
+        """
+        从模型响应中提取原生工具调用，并统一成 Host 可执行的 spec 列表。
+        spec 结构: {"id":..., "name":"...", "parameters":{...}}
+        """
+        return NativeFunctionCallingAdapter.parse_tool_calls(provider, response)
+
+    def build_native_tool_result_messages(self, provider: str, call_results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        将工具执行结果转换为不同厂商要求的回填消息格式。
+        """
+        return NativeFunctionCallingAdapter.build_tool_result_messages(provider, call_results)
 
     def detect_tool(self, text: str) -> Tuple[bool, Dict[str, Any]]:
         if not isinstance(text, str):

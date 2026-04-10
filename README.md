@@ -76,6 +76,9 @@ tool_result = host.call_tool(spec, formated=True)  # 4.执行工具调用并返�
 - `tools_guide`：从 JSON Schema 提取参数说明，生成人类可读指南，引导模型填参。
 - `detect_tool`：从模型输出中提取 `<tool>` 指令的 JSON，有则进入调用链，无则直接回复。
 - `call_tool`：按工具名自动定位服务器并执行，返回格式化的 `{name, server, result}` JSON，供下一轮注入 `<tool_result>...</tool_result>`。
+- `build_native_tools_payload`：将 MCP 工具注册表转成模型原生 function calling 的 `tools` 参数（支持 OpenAI / Qwen / DeepSeek / Gemini）。
+- `parse_native_tool_calls`：从模型原生响应中提取工具调用并标准化为 `{id, name, parameters}`。
+- `build_native_tool_result_messages`：把工具结果转换为各家模型要求的回填消息格式。
 
 示例代码
 
@@ -130,8 +133,11 @@ else:
 
 ## 🤖 模型兼容性
 
-- 支持任意兼容 OpenAI SDK 的大模型与服务商：将 `LLM_BASE_URL`、`LLM_API_KEY`、`LLM_MODEL` 配置为对应厂商的网关与模型即可使用。
-- 示例：Ark 平台 `LLM_BASE_URL=https://ark.cn-beijing.volces.com/api/v3`；其他 OpenAI 兼容网关也可按需替换。
+- 同时支持两种模式：
+  - 文本工具协议（`<tool>{...}</tool>`）：适用于不支持原生工具调用的模型。
+  - 原生 function calling：支持 OpenAI、Qwen、DeepSeek、Gemini 四种模式。
+- 新增环境变量 `LLM_PROVIDER`，可选值：`openai` / `qwen` / `deepseek` / `gemini`。
+- 默认 `LLM_PROVIDER=openai`，并沿用 `LLM_BASE_URL`、`LLM_API_KEY`、`LLM_MODEL`。
 
 
 ## 🛠️ 环境与依赖
