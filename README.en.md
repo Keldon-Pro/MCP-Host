@@ -61,6 +61,9 @@ tool_result = host.call_tool(spec, formated=True)  # 4. Execute tool call and re
 - `tools_guide`: Extract parameter descriptions from JSON Schema and generate a human-readable guide to help the model fill arguments.
 - `detect_tool`: Extract `<tool>` instruction JSON from model output; if present, enter the invocation chain; otherwise reply directly.
 - `call_tool`: Locate the server by tool name automatically and execute; returns formatted `{name, server, result}` JSON to inject as `<tool_result>...</tool_result>` for the next turn.
+- `build_native_tools_payload`: Convert MCP tool registry into native function-calling `tools` payload (OpenAI / Qwen / DeepSeek / Gemini).
+- `parse_native_tool_calls`: Extract native tool calls from model responses and normalize to `{id, name, parameters}`.
+- `build_native_tool_result_messages`: Convert tool execution results into provider-specific follow-up message formats.
 
 Example:
 
@@ -115,8 +118,11 @@ else:
 
 ## 🤖 Model Compatibility
 
-- Supports any model and provider compatible with the OpenAI SDK: set `LLM_BASE_URL`, `LLM_API_KEY`, and `LLM_MODEL` to the vendor gateway and model.
-- Example: Ark platform `LLM_BASE_URL=https://ark.cn-beijing.volces.com/api/v3`; other OpenAI-compatible gateways can be used.
+- Two calling modes are supported:
+  - Text tool contract (`<tool>{...}</tool>`) for models without native function calling.
+  - Native function calling for OpenAI, Qwen, DeepSeek, and Gemini.
+- New environment variable: `LLM_PROVIDER` (`openai` / `qwen` / `deepseek` / `gemini`).
+- `LLM_PROVIDER` defaults to `openai`; `LLM_BASE_URL`, `LLM_API_KEY`, and `LLM_MODEL` are still used.
 
 ## 🛠️ Environment and Dependencies
 
