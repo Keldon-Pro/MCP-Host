@@ -333,6 +333,160 @@ class MCPHost:
             spec = {}
         return bool(spec), spec
 
+    def _registry_to_function_schemas(self, registry: Optional[Dict[str, Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+        """
+        将工具注册表统一转换为函数 schema 列表：
+        每项包含 `name/description/parameters/server`。
+        """
+        reg = registry or self.list_all_tools()
+        items: List[Dict[str, Any]] = []
+        for tool_name, info in (reg or {}).items():
+            schema = (info or {}).get("schema") or {}
+            server = (info or {}).get("server")
+            desc = ""
+            if isinstance(schema, dict):
+                desc = (schema.get("description") or schema.get("summary") or schema.get("note") or "")
+            params = self.extract_param_schema(schema)
+            if not isinstance(params, dict) or not params:
+                params = {"type": "object", "properties": {}}
+            items.append({
+                "name": tool_name,
+                "description": desc or "",
+                "parameters": params,
+                "server": server,
+            })
+        return items
+
+    def tools_for_openai(self, registry: Optional[Dict[str, Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+        """
+        生成 OpenAI function calling 的 `tools` 参数。
+        参考格式：`[{type:"function", function:{name,description,parameters}}]`
+        """
+        return [
+            {
+                "type": "function",
+                "function": {
+                    "name": it["name"],
+                    "description": it["description"],
+                    "parameters": it["parameters"],
+                },
+            }
+            for it in self._registry_to_function_schemas(registry)
+        ]
+
+    def tools_for_qwen(self, registry: Optional[Dict[str, Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+        """
+        生成 Qwen function calling 的 `tools` 参数。
+        Qwen 与 OpenAI 兼容，采用相同结构。
+        """
+        return self.tools_for_openai(registry)
+
+    def tools_for_deepseek(self, registry: Optional[Dict[str, Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+        """
+        生成 DeepSeek function calling 的 `tools` 参数。
+        DeepSeek 与 OpenAI 兼容，采用相同结构。
+        """
+        return self.tools_for_openai(registry)
+
+    def tools_for_gemini(self, registry: Optional[Dict[str, Dict[str, Any]]] = None) -> List[Dict[str, Any]]:
+        """
+        生成 Gemini function calling 的 `tools` 参数（function_declarations 风格）。
+        可直接用于：
+        `tools=[{"function_declarations": ...}]`
+        """
+        declarations: List[Dict[str, Any]] = []
+        for it in self._registry_to_function_schemas(registry):
+            declarations.append({
+                "name": it["name"],
+                "description": it["description"],
+                "parameters": it["parameters"],
+            })
+        return [{"function_declarations": declarations}]
+
+    def detect_native_tool_calls(self, provider: str, message: Any) -> List[Dict[str, Any]]:
+        """
+        从不同模型供应商的原生 function calling 响应中提取工具调用，统一为：
+        `{type:"function", name, parameters, id?}` 列表。
+        - provider: openai / qwen / deepseek / gemini
+        - message: SDK message 对象或字典
+        """
+        p = (provider or "").strip().lower()
+        out: List[Dict[str, Any]] = []
+        if message is None:
+            return out
+
+        # --- OpenAI / Qwen / DeepSeek (tool_calls) ---
+        if p in {"openai", "qwen", "deepseek"}:
+            tool_calls = None
+            if isinstance(message, dict):
+                tool_calls = message.get("tool_calls")
+            else:
+                tool_calls = getattr(message, "tool_calls", None)
+            if not tool_calls:
+                return out
+            for tc in tool_calls:
+                if isinstance(tc, dict):
+                    fn = tc.get("function") or {}
+                    cid = tc.get("id")
+                else:
+                    fn = getattr(tc, "function", None)
+                    cid = getattr(tc, "id", None)
+                if not fn:
+                    continue
+                if isinstance(fn, dict):
+                    name = fn.get("name")
+                    raw_args = fn.get("arguments")
+                else:
+                    name = getattr(fn, "name", None)
+                    raw_args = getattr(fn, "arguments", None)
+                if not name:
+                    continue
+                params: Dict[str, Any] = {}
+                if isinstance(raw_args, dict):
+                    params = raw_args
+                elif isinstance(raw_args, str):
+                    try:
+                        parsed = json.loads(raw_args)
+                        if isinstance(parsed, dict):
+                            params = parsed
+                    except Exception:
+                        params = {}
+                spec = {"type": "function", "name": name, "parameters": params}
+                if cid:
+                    spec["id"] = cid
+                out.append(spec)
+            return out
+
+        # --- Gemini (functionCall) ---
+        if p == "gemini":
+            parts = None
+            if isinstance(message, dict):
+                parts = ((message.get("content") or {}).get("parts") or message.get("parts"))
+            else:
+                content = getattr(message, "content", None)
+                parts = getattr(content, "parts", None) if content is not None else getattr(message, "parts", None)
+            if not isinstance(parts, list):
+                return out
+            for part in parts:
+                fc = None
+                if isinstance(part, dict):
+                    fc = part.get("functionCall") or part.get("function_call")
+                else:
+                    fc = getattr(part, "function_call", None) or getattr(part, "functionCall", None)
+                if not fc:
+                    continue
+                if isinstance(fc, dict):
+                    name = fc.get("name")
+                    args = fc.get("args") or {}
+                else:
+                    name = getattr(fc, "name", None)
+                    args = getattr(fc, "args", None) or {}
+                if not name:
+                    continue
+                out.append({"type": "function", "name": name, "parameters": (args if isinstance(args, dict) else {})})
+            return out
+        return out
+
     def call_tool(self, spec: Dict[str, Any], formated: bool = True) -> str:
         # 接受 `<tool>` JSON 契约，按注册表定位服务器并执行调用
         name = (spec or {}).get("name")
@@ -358,6 +512,24 @@ class MCPHost:
                 return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
         except Exception as e:
             return json.dumps({"name": name, "server": server, "error": str(e)}, ensure_ascii=False, indent=2)
+
+    def call_native_tool_calls(self, tool_calls: List[Dict[str, Any]], formated: bool = True) -> List[Dict[str, Any]]:
+        """
+        批量执行原生 function calling 提取出的调用项。
+        输入: `[{type:"function", name, parameters, id?}, ...]`
+        返回: `[{id?, name, result_json}, ...]`
+        """
+        out: List[Dict[str, Any]] = []
+        for spec in tool_calls or []:
+            one = self.call_tool(spec, formated=formated)
+            item = {
+                "name": (spec or {}).get("name"),
+                "result_json": one,
+            }
+            if (spec or {}).get("id"):
+                item["id"] = spec.get("id")
+            out.append(item)
+        return out
 
     def call_server_tool(self, name: str, tool: str, **params) -> str:
         """

@@ -132,6 +132,27 @@ else:
 
 - 支持任意兼容 OpenAI SDK 的大模型与服务商：将 `LLM_BASE_URL`、`LLM_API_KEY`、`LLM_MODEL` 配置为对应厂商的网关与模型即可使用。
 - 示例：Ark 平台 `LLM_BASE_URL=https://ark.cn-beijing.volces.com/api/v3`；其他 OpenAI 兼容网关也可按需替换。
+- 新增原生 Function Calling 适配：
+  - OpenAI：`host.tools_for_openai(...)` + `host.detect_native_tool_calls("openai", message)`
+  - Qwen：`host.tools_for_qwen(...)` + `host.detect_native_tool_calls("qwen", message)`
+  - DeepSeek：`host.tools_for_deepseek(...)` + `host.detect_native_tool_calls("deepseek", message)`
+  - Gemini：`host.tools_for_gemini(...)` + `host.detect_native_tool_calls("gemini", message)`
+
+### 原生 Function Calling 快速示例
+
+```python
+tools = host.list_all_tools()
+openai_tools = host.tools_for_openai(tools)  # qwen/deepseek 也可复用同结构
+
+resp = client.chat.completions.create(
+    model=model,
+    messages=[{"role": "user", "content": "杭州今天天气如何？"}],
+    tools=openai_tools,
+    tool_choice="auto",
+)
+calls = host.detect_native_tool_calls("openai", resp.choices[0].message)
+results = host.call_native_tool_calls(calls, formated=True)
+```
 
 
 ## 🛠️ 环境与依赖
@@ -163,3 +184,6 @@ else:
 - 单次调用链：`python demo_agent.py`
 - 多步交互：`python demo_agent_multi.py`
 
+可选环境变量：
+- `TOOL_CALL_MODE=native|text`（默认 `native`）
+- `LLM_PROVIDER=openai|qwen|deepseek|gemini`（默认 `openai`）

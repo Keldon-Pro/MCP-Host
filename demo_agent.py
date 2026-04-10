@@ -1,10 +1,7 @@
 import os
 import json
-import re
 from dotenv import load_dotenv
 from openai import OpenAI
-from pathlib import Path
-from typing import Dict, Any
 from mcp_host import MCPHost
 
 load_dotenv(override=False)
@@ -30,13 +27,81 @@ def main():
     # 读取用户输入并打印到控制台，便于观察交互内容
     user_msg = input("请输入消息: ").strip()
     print(f"\nUSER > {user_msg}\n")
+    provider = (os.getenv("LLM_PROVIDER") or "openai").strip().lower()
+    mode = (os.getenv("TOOL_CALL_MODE") or "native").strip().lower()
+
+    # --- 优先演示原生 function calling ---
+    if mode == "native":
+        sys_prompt = "你是人工智能助手。可使用 MCP 工具。请在需要时主动调用工具，并根据工具结果给出中文答案。"
+        if provider == "gemini":
+            llm_tools = host.tools_for_gemini(tools)
+        elif provider == "qwen":
+            llm_tools = host.tools_for_qwen(tools)
+        elif provider == "deepseek":
+            llm_tools = host.tools_for_deepseek(tools)
+        else:
+            llm_tools = host.tools_for_openai(tools)
+
+        first = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": sys_prompt},
+                {"role": "user", "content": user_msg},
+            ],
+            tools=llm_tools,
+            tool_choice="auto",
+        )
+        msg = first.choices[0].message
+        calls = host.detect_native_tool_calls(provider, msg)
+        if calls:
+            print("\nASSISTANT > 原生工具调用\n")
+            print(json.dumps(calls, ensure_ascii=False, indent=2))
+            call_results = host.call_native_tool_calls(calls, formated=True)
+            for it in call_results:
+                print("\nTOOL_RESULT >\n")
+                print(it["result_json"])
+
+            # OpenAI-compatible tool result messages
+            tool_messages = []
+            for it in call_results:
+                tool_call_id = it.get("id")
+                payload = it.get("result_json") or "{}"
+                if tool_call_id:
+                    tool_messages.append({
+                        "role": "tool",
+                        "tool_call_id": tool_call_id,
+                        "content": payload,
+                    })
+                else:
+                    tool_messages.append({
+                        "role": "system",
+                        "content": "<tool_result>" + payload + "</tool_result>",
+                    })
+
+            second = client.chat.completions.create(
+                model=model,
+                messages=[
+                    {"role": "system", "content": sys_prompt},
+                    {"role": "user", "content": user_msg},
+                    {
+                        "role": "assistant",
+                        "content": msg.content or "",
+                        "tool_calls": getattr(msg, "tool_calls", None),
+                    },
+                    *tool_messages,
+                ],
+            )
+            print("\nASSISTANT > " + (second.choices[0].message.content or "") + "\n")
+            return
+        print("\nASSISTANT > " + (msg.content or "") + "\n")
+        return
+
+    # --- 兼容旧版：文本工具调用 ---
     sys_prompt = (
         "你是人工智能助手。可使用 MCP 工具。若需要调用工具，"
         "请仅输出如下格式文本：<tool>{\n\t\"type\": \"function\",\n\t\"name\": \"<工具名>\",\n\t\"parameters\": {…}\n}</tool>。"
         "以下为各工具的使用说明：\n" + host.tools_guide(tools)
     )
-
-    # 第一段对话：请求 LLM 决定是否输出 <tool> 调用契约
     first = client.chat.completions.create(
         model=model,
         messages=[
@@ -44,35 +109,26 @@ def main():
             {"role": "user", "content": user_msg},
         ],
     )
-    # 提取首次回复文本
     content = first.choices[0].message.content or ""
-
     has_tool, spec = host.detect_tool(content)
-    if has_tool:
-        print("\nASSISTANT > 生成的工具调用\n")
-        print(json.dumps(spec, ensure_ascii=False, indent=2))
-        tool_result = host.call_tool(spec,formated=True)
-        print("\nTOOL_RESULT >\n")
-        print(tool_result)
-
-
-        # 第二段对话：
-        # - 注入完整工具结果到 <tool_result> 标签
-        # - 要求模型基于工具结果用中文回复用户
-        second = client.chat.completions.create(
-            model=model,
-            messages=[
-                {"role": "system", "content": sys_prompt},
-                {"role": "user", "content": user_msg},
-                {"role": "assistant", "content": content},
-                {"role": "system", "content": "<tool_result>" + tool_result + "</tool_result> 请基于工具结果用中文回复用户。"},
-            ],
-        )
-        # 打印最终助手回复
-        print("\nASSISTANT > " + (second.choices[0].message.content or "") + "\n")
-    else:
-        # 若未生成工具契约，直接输出首次回复
+    if not has_tool:
         print("\nASSISTANT > " + content + "\n")
+        return
+    print("\nASSISTANT > 生成的工具调用\n")
+    print(json.dumps(spec, ensure_ascii=False, indent=2))
+    tool_result = host.call_tool(spec, formated=True)
+    print("\nTOOL_RESULT >\n")
+    print(tool_result)
+    second = client.chat.completions.create(
+        model=model,
+        messages=[
+            {"role": "system", "content": sys_prompt},
+            {"role": "user", "content": user_msg},
+            {"role": "assistant", "content": content},
+            {"role": "system", "content": "<tool_result>" + tool_result + "</tool_result> 请基于工具结果用中文回复用户。"},
+        ],
+    )
+    print("\nASSISTANT > " + (second.choices[0].message.content or "") + "\n")
 
 if __name__ == "__main__":
     main()
